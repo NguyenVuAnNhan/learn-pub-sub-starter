@@ -6,13 +6,21 @@ import (
 	"encoding/json"
 )
 
+type AckMode int
+
+const (
+	Ack AckMode = iota
+	NackRequeue
+	NackDiscard
+)
+
 func SubscribeJSON[T any](
     conn *amqp.Connection,
     exchange,
     queueName,
     key string,
     queueType SimpleQueueType, // an enum to represent "durable" or "transient"
-    handler func(T),
+    handler func(T) AckMode,
 ) error {
 	ch, _, err := DeclareAndBind(conn, exchange, queueName, key, queueType)
 
@@ -44,8 +52,18 @@ func SubscribeJSON[T any](
 				msg.Nack(false, false) // reject the message and don't requeue
 				continue
 			}
-			handler(data)
-			msg.Ack(false) // acknowledge the message
+			ackMode := handler(data)
+			switch ackMode {
+			case Ack:
+				fmt.Printf("Acknowledging message: %s\n", string(msg.Body))
+				msg.Ack(false)
+			case NackRequeue:
+				fmt.Printf("Nacking and requeuing message: %s\n", string(msg.Body))
+				msg.Nack(false, true)
+			case NackDiscard:
+				fmt.Printf("Nacking and discarding message: %s\n", string(msg.Body))
+				msg.Nack(false, false)
+			}
 		}
 	}()
 
