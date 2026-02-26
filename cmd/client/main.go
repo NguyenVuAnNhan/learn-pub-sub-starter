@@ -68,7 +68,7 @@ func main() {
 		"war",
 		fmt.Sprintf("%s.*", routing.WarRecognitionsPrefix),
 		pubsub.DurableQueue,
-		handlerWar(gameState),
+		handlerWar(gameState, publishCh),
 	)
 
 	if err != nil {
