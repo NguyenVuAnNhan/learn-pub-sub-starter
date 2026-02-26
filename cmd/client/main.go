@@ -7,6 +7,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 	"fmt"
 	"errors"
+	"log"
 )
 
 func main() {
@@ -26,6 +27,11 @@ func main() {
 		return
 	}
 
+	publishCh, err := conn.Channel()
+	if err != nil {
+		log.Fatalf("could not create channel: %v", err)
+	}
+
 	gameState := gamelogic.NewGameState(username)
 
 	err = pubsub.SubscribeJSON(
@@ -42,6 +48,22 @@ func main() {
 		return
 	}
 
+	err = pubsub.SubscribeJSON(
+		conn,
+		routing.ExchangePerilTopic,
+		fmt.Sprintf("%s.%s",routing.ArmyMovesPrefix, username),
+		fmt.Sprintf("%s.*", routing.ArmyMovesPrefix),
+		pubsub.TransientQueue,
+		handlerMove(gameState),
+	)
+
+	if err != nil {
+		fmt.Printf("failed to subscribe to army move messages: %v\n", err)
+		return
+	}
+
+
+	// REPL loop
 	for {
 		words := gamelogic.GetInput()
 		if len(words) == 0 {
@@ -56,9 +78,14 @@ func main() {
 		}
 		case "move": {
 			command, err := gameState.CommandMove(words)
-			fmt.Printf("Command: %+v\n", command)
 			if err != nil {
 				fmt.Println(err)
+			}
+			err = pubsub.PublishJSON(publishCh, routing.ExchangePerilTopic, fmt.Sprintf("%s.%s", routing.ArmyMovesPrefix, username), command)
+			if err != nil {
+				fmt.Printf("Failed to publish move: %v\n", err)
+			} else {
+				fmt.Printf("Published move: %+v\n", command)
 			}
 		}
 		case "status": {
