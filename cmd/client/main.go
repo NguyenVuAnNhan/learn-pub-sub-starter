@@ -3,15 +3,10 @@ package main
 import (
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
+	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"fmt"
 	"errors"
-)
-
-type SimpleQueueType int
-const (
-	DurableQueue SimpleQueueType = iota
-	TransientQueue
 )
 
 func main() {
@@ -31,19 +26,21 @@ func main() {
 		return
 	}
 
-	_, _, err = DeclareAndBind(
+	gameState := gamelogic.NewGameState(username)
+
+	err = pubsub.SubscribeJSON(
 		conn,
-		routing.ExchangePerilDirect, 
-		fmt.Sprintf("%s.%s", routing.PauseKey, username),
-		routing.PauseKey, 
-		TransientQueue,
+		routing.ExchangePerilDirect,
+		fmt.Sprintf("pause.%s", username),
+		routing.PauseKey,
+		pubsub.TransientQueue,
+		handlerPause(gameState),
 	)
 
 	if err != nil {
-		panic(err)
+		fmt.Printf("failed to subscribe to pause messages: %v\n", err)
+		return
 	}
-
-	gameState := gamelogic.NewGameState(username)
 
 	for {
 		words := gamelogic.GetInput()
@@ -80,46 +77,4 @@ func main() {
 		}
 	}
 	fmt.Println("Shutting down Peril client...")
-}
-
-func DeclareAndBind(
-	conn *amqp.Connection,
-	exchange,
-	queueName,
-	key string,
-	queueType SimpleQueueType, // SimpleQueueType is an "enum" type I made to represent "durable" or "transient"
-) (*amqp.Channel, amqp.Queue, error) {
-	ch, err := conn.Channel()
-	if err != nil {
-		return nil, amqp.Queue{}, fmt.Errorf("failed to open channel: %w", err)
-	}
-
-	durable := queueType == DurableQueue
-
-	queue, err := ch.QueueDeclare(
-		queueName,
-		durable,
-		!durable, // delete when unused
-		!durable, // exclusive
-		false, // no-wait
-		nil,   // arguments
-	)
-	if err != nil {
-		ch.Close()
-		return nil, amqp.Queue{}, fmt.Errorf("failed to declare queue: %w", err)
-	}
-
-	err = ch.QueueBind(
-		queue.Name,
-		key,
-		exchange,
-		false, // no-wait
-		nil,   // arguments
-	)
-	if err != nil {
-		ch.Close()
-		return nil, amqp.Queue{}, fmt.Errorf("failed to bind queue: %w", err)
-	}
-
-	return ch, queue, nil
 }
