@@ -1,13 +1,11 @@
 package main
 
 import (
-	"os"
-	"os/signal"
-	"syscall"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"fmt"
+	"errors"
 )
 
 type SimpleQueueType int
@@ -45,12 +43,42 @@ func main() {
 		panic(err)
 	}
 
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	defer signal.Stop(sigCh)
+	gameState := gamelogic.NewGameState(username)
 
-	<- sigCh
-
+	for {
+		words := gamelogic.GetInput()
+		if len(words) == 0 {
+			continue
+		}
+		switch words[0] {
+		case "spawn": {
+			err := gameState.CommandSpawn(words)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+		case "move": {
+			command, err := gameState.CommandMove(words)
+			fmt.Printf("Command: %+v\n", command)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+		case "status": {
+			gameState.CommandStatus()
+		}
+		case "help":
+			gamelogic.PrintClientHelp()
+		case "spam": {
+			fmt.Println("Spamming not allowed yet!")
+		}
+		case "quit":
+			gamelogic.PrintQuit()
+			return
+		default:
+			errors.New("unknown command")
+		}
+	}
 	fmt.Println("Shutting down Peril client...")
 }
 

@@ -3,12 +3,10 @@ package main
 import (
 	"fmt"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"os"
-	"os/signal"
-	"syscall"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/pubsub"
 	"github.com/bootdotdev/learn-pub-sub-starter/internal/gamelogic"
+	"log"
 )
 
 func main() {
