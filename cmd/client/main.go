@@ -54,7 +54,7 @@ func main() {
 		fmt.Sprintf("%s.%s",routing.ArmyMovesPrefix, username),
 		fmt.Sprintf("%s.*", routing.ArmyMovesPrefix),
 		pubsub.TransientQueue,
-		handlerMove(gameState),
+		handlerMove(gameState, publishCh),
 	)
 
 	if err != nil {
@@ -62,6 +62,19 @@ func main() {
 		return
 	}
 
+	err = pubsub.SubscribeJSON(
+		conn,
+		routing.ExchangePerilTopic,
+		"war",
+		fmt.Sprintf("%s.*", routing.WarRecognitionsPrefix),
+		pubsub.DurableQueue,
+		handlerWar(gameState),
+	)
+
+	if err != nil {
+		fmt.Printf("failed to subscribe to war messages: %v\n", err)
+		return
+	}
 
 	// REPL loop
 	for {
