@@ -31,7 +31,9 @@ func DeclareAndBind(
 		!durable, // delete when unused
 		!durable, // exclusive
 		false, // no-wait
-		nil,   // arguments
+		amqp.Table{
+			"x-dead-letter-exchange": "peril_dlx",
+		}, // arguments
 	)
 	if err != nil {
 		ch.Close()
