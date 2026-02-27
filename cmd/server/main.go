@@ -24,16 +24,18 @@ func main() {
 		log.Fatalf("could not create channel: %v", err)
 	}
 
-	_, _, err = pubsub.DeclareAndBind(
+	err = pubsub.SubscribeGob(
 		conn,
-		routing.ExchangePerilTopic, 
+		routing.ExchangePerilTopic,
 		routing.GameLogSlug,
-		fmt.Sprintf("%s.*", routing.GameLogSlug), 
+		fmt.Sprintf("%s.*", routing.GameLogSlug),
 		pubsub.DurableQueue,
+		handlerLog(),
 	)
 
 	if err != nil {
-		log.Fatalf("could not declare and bind queue: %v", err)
+		fmt.Printf("failed to subscribe to game log messages: %v\n", err)
+		return
 	}
 
 	gamelogic.PrintServerHelp()
