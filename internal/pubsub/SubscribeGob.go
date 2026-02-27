@@ -21,6 +21,12 @@ func SubscribeGob[T any](
 		return fmt.Errorf("failed to declare and bind: %w", err)
 	}
 
+	err = ch.Qos(10, 0, false)
+	if err != nil {
+		ch.Close()
+		return fmt.Errorf("failed to set QoS: %w", err)
+	}
+
 	msgs, err := ch.Consume(
 		queueName,
 		"",    // consumer
