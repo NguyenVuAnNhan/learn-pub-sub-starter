@@ -12,7 +12,7 @@ func publishGameLog(
 	exchange string,
 	username string,
 	log routing.GameLog,
-) pubsub.AckMode {
+) error {
 	routingKey := routing.GameLogSlug + "." + username
 	return pubsub.PublishGob(ch, exchange, routingKey, log)
 }

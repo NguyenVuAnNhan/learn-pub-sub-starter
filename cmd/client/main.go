@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"errors"
 	"log"
+	"strconv"
+	"time"
 )
 
 func main() {
@@ -107,7 +109,28 @@ func main() {
 		case "help":
 			gamelogic.PrintClientHelp()
 		case "spam": {
-			fmt.Println("Spamming not allowed yet!")
+			if len(words) < 2 {
+				fmt.Println("usage: spam <n>")
+				continue
+			}
+			n, err := strconv.Atoi(words[1])
+			if err != nil {
+				fmt.Printf("error: %s is not a valid number\n", words[1])
+				continue
+			}
+			for i := 0; i < n; i++ {
+				msg := gamelogic.GetMaliciousLog()
+				log := routing.GameLog{
+					CurrentTime: time.Now(),
+					Message: msg,
+					Username: username,
+				}
+				err = publishGameLog(publishCh, routing.ExchangePerilTopic, username, log)
+				if err != nil {
+					fmt.Printf("error publishing malicious log: %s\n", err)
+				}
+			}
+			fmt.Printf("Published %v malicious logs\n", n)
 		}
 		case "quit":
 			gamelogic.PrintQuit()

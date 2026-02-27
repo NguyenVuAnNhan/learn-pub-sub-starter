@@ -11,12 +11,12 @@ func PublishGob[T any](
 	exchange,
 	key string,
 	msg T,
-) AckMode {
+) error {
 	var buf bytes.Buffer
 
 	enc := gob.NewEncoder(&buf)
 	if err := enc.Encode(msg); err != nil {
-		return NackRequeue
+		return err
 	}
 
 	err := ch.Publish(
@@ -31,8 +31,8 @@ func PublishGob[T any](
 	)
 
 	if err != nil {
-		return NackRequeue
+		return err
 	}
 
-	return Ack
+	return nil
 }
